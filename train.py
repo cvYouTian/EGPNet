@@ -13,7 +13,7 @@ from data_utils import DatasetLoader
 from model import EGPNet
 from loss import SoftLoULoss1, SoftLoULoss
 import torch.nn.functional as F
-from metric import mIoU
+from metrics import mIoU
 
 
 
