@@ -284,7 +284,7 @@ class EGPNet(nn.Module):
         self.reduce2 = nn.Conv2d(128, 64, kernel_size=1, padding=0, bias=False)
         self.reduce1 = nn.Conv2d(64, 32, kernel_size=1, padding=0, bias=False)
 
-        self.eirm = EIRM()
+        self.eirm = RIRM()
 
         self.fuse_local = nn.Conv2d(96, 128, kernel_size=1, padding=0, bias=False)
         self.upsample = nn.PixelShuffle(2)
