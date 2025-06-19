@@ -21,10 +21,10 @@ def parse_args():
 
     # Setting parameters
     parser = ArgumentParser(description='Implement of EGPNet model')
-    parser.add_argument('--dataset', type=str, default='MDvsFA_cGAN', help='sirst_aug IRSTD-1k   MDvsFA_cGAN')
+    parser.add_argument('--dataset', type=str, default='IRSTD-1k', help='sirst_aug IRSTD-1k   MDvsFA_cGAN')
 
     # Training parameters
-    parser.add_argument('--batch-size', type=int, default=16,help='batch_size for training')
+    parser.add_argument('--batch-size', type=int, default=1, help='batch_size for training')
     parser.add_argument('--epochs', type=int, default=200, help='number of epochs')
     parser.add_argument('--warm-up-epochs', type=int, default=0, help='warm up epochs')
     parser.add_argument('--learning_rate', type=float, default=0.02, help='learning rate')
@@ -96,6 +96,8 @@ class Trainer(object):
             labels = labels[:,0:1,:,:].cuda()
             edge_gt = self.gradmask(labels.cuda())
             output, edge_out = self.net(data)
+
+            edge_gt = torch.clamp(edge_gt, 0.0, 1.0)
             
             loss_io = self.criterion1(output, labels)
             loss_edge = 10 * self.criterion2(edge_out, edge_gt)+ self.criterion1(edge_out, edge_gt)
@@ -134,6 +136,8 @@ class Trainer(object):
                 edge_out = edge_out.cpu()
                 edge_gt = edge_gt.cpu()
 
+            edge_gt = torch.clamp(edge_gt, 0.0, 1.0)
+
             loss_io = self.criterion1(output, labels)
             loss_edge = 10 * self.bce(edge_out, edge_gt)+ self.criterion1(edge_out, edge_gt)
             loss = loss_io + loss_edge
@@ -146,10 +150,10 @@ class Trainer(object):
             tbar.set_description('Epoch:%3d, eval loss:%f, eval_edge:%f, mIoU:%f'
                                  %(epoch, np.mean(eval_losses), np.mean(eval_losses_edge), mIoU))
 
+        # debug IoU -> mIoU
+        pkl_name = 'Epoch-%3d_IoU-%.4f.pkl' % (epoch, mIoU)
 
-        pkl_name = 'Epoch-%3d_IoU-%.4f.pkl' % (epoch, IoU)
-
-        if IoU > self.best_iou:
+        if mIoU > self.best_iou:
             torch.save(self.net, ops.join(self.save_pkl, pkl_name))
             self.best_iou = mIoU
 

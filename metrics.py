@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import numpy as np
-
+from skimage import measure
 
 class SigmoidMetric():
     def __init__(self):
@@ -305,3 +305,46 @@ class mIoU():
         self.total_union = 0
         self.total_correct = 0
         self.total_label = 0
+
+# add fuction
+
+def batch_pix_accuracy(output, target):
+
+    if len(target.shape) == 3:
+        target = np.expand_dims(target.float(), axis=1)
+    elif len(target.shape) == 4:
+        target = target.float()
+    else:
+        raise ValueError("Unknown target dimension")
+
+    assert output.shape == target.shape, "Predict and Label Shape Don't Match"
+    predict = (output > 0).float()
+    pixel_labeled = (target > 0).float().sum()
+    pixel_correct = (((predict == target).float())*((target > 0)).float()).sum()
+
+    assert pixel_correct <= pixel_labeled, "Correct area should be smaller than Labeled"
+    return pixel_correct, pixel_labeled
+
+
+def batch_intersection_union(output, target, nclass):
+
+    mini = 1
+    maxi = 1
+    nbins = 1
+    predict = (output > 0).float()
+    if len(target.shape) == 3:
+        target = np.expand_dims(target.float(), axis=1)
+    elif len(target.shape) == 4:
+        target = target.float()
+    else:
+        raise ValueError("Unknown target dimension")
+    intersection = predict * ((predict == target).float())
+
+    area_inter, _  = np.histogram(intersection.cpu(), bins=nbins, range=(mini, maxi))
+    area_pred,  _  = np.histogram(predict.cpu(), bins=nbins, range=(mini, maxi))
+    area_lab,   _  = np.histogram(target.cpu(), bins=nbins, range=(mini, maxi))
+    area_union     = area_pred + area_lab - area_inter
+
+    assert (area_inter <= area_union).all(), \
+        "Error: Intersection area should be smaller than Union area"
+    return area_inter, area_union

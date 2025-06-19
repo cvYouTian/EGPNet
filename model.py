@@ -55,7 +55,7 @@ class LTA(nn.Module):
         self.ksize = ksize
       
     def forward(self, img):
-        pdb.set_trace()
+        # pdb.set_trace()
         B, C, H, W = img.shape
         pad = (self.ksize - 1) // 2
         img = F.pad(img, [pad, pad, pad, pad], mode='constant', value=0)
