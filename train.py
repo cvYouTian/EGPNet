@@ -1,5 +1,6 @@
 # -*-coding:utf-8-*-
 import os
+
 os.environ["CUDA_VISIBLE_DEVICES"] = '0,1,2,3'
 import torch
 import torch.nn as nn
@@ -16,9 +17,7 @@ import torch.nn.functional as F
 from metrics import mIoU
 
 
-
 def parse_args():
-
     # Setting parameters
     parser = ArgumentParser(description='Implement of EGPNet model')
     parser.add_argument('--dataset', type=str, default='IRSTD-1k', help='sirst_aug IRSTD-1k   MDvsFA_cGAN')
@@ -32,20 +31,20 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-        
+
 class Trainer(object):
     def __init__(self, args):
         self.args = args
-        
+
         ## dataset
         trainset = DatasetLoader(args, mode='train')
         valset = DatasetLoader(args, mode='test')
         self.train_data_loader = Data.DataLoader(trainset, batch_size=args.batch_size, shuffle=True)
         self.val_data_loader = Data.DataLoader(valset, batch_size=1)
-        
+
         print(len(self.val_data_loader))
-        
-        self.gradmask  = GradientMask()
+
+        self.gradmask = GradientMask()
         layer_blocks = [4] * 3
         self.net = EGPNet(layer_blocks, [16, 32, 64, 128])
 
@@ -61,23 +60,22 @@ class Trainer(object):
         self.criterion1 = SoftLoULoss1()
         self.criterion2 = nn.BCELoss()
         self.bce = nn.BCELoss()
-        
+
         self.optimizer = torch.optim.Adagrad(self.net.parameters(), lr=args.learning_rate, weight_decay=1e-4)
 
-        self.best_miou = 0
+        self.best_iou = 0
         self.mIoU = mIoU(1)
 
         self.save_folder = ops.join('result/', self.args.dataset)
         self.save_pkl = ops.join(self.save_folder, 'checkpoint')
-        
+
         if not ops.exists('result'):
             os.mkdir('result')
-            
+
         if not ops.exists(self.save_folder):
             os.mkdir(self.save_folder)
         if not ops.exists(self.save_pkl):
             os.mkdir(self.save_pkl)
-
 
     def training(self, epoch):
 
@@ -85,22 +83,21 @@ class Trainer(object):
         losses_edge = []
         self.net.train()
 
-        lr = args.learning_rate /(2**(epoch // 30))
+        lr = args.learning_rate / (2 ** (epoch // 30))
         for param_group in self.optimizer.param_groups:
             param_group["lr"] = lr
 
         tbar = tqdm(self.train_data_loader)
         for i, (data, labels, name) in enumerate(tbar):
-
             data = data.cuda()
-            labels = labels[:,0:1,:,:].cuda()
+            labels = labels[:, 0:1, :, :].cuda()
             edge_gt = self.gradmask(labels.cuda())
             output, edge_out = self.net(data)
 
             edge_gt = torch.clamp(edge_gt, 0.0, 1.0)
-            
+
             loss_io = self.criterion1(output, labels)
-            loss_edge = 10 * self.criterion2(edge_out, edge_gt)+ self.criterion1(edge_out, edge_gt)
+            loss_edge = 10 * self.criterion2(edge_out, edge_gt) + self.criterion1(edge_out, edge_gt)
             loss = loss_io + loss_edge
 
             self.optimizer.zero_grad()
@@ -110,7 +107,8 @@ class Trainer(object):
             losses.append(loss.item())
 
             tbar.set_description('Epoch:%3d, lr:%f, train loss:%f, edge_loss:%f'
-                                  % (epoch, trainer.optimizer.param_groups[0]['lr'], np.mean(losses), np.mean(losses_edge)))
+                                 % (
+                                 epoch, trainer.optimizer.param_groups[0]['lr'], np.mean(losses), np.mean(losses_edge)))
 
     def validation(self, epoch):
         self.mIoU.reset()
@@ -121,17 +119,17 @@ class Trainer(object):
         tbar = tqdm(self.val_data_loader)
         for i, (data, labels, name) in enumerate(tbar):
             if data.shape[2] % 8 != 0:
-               data = data[:,:,:-(data.shape[2]%8),:]
-               labels = labels[:,:,:-(labels.shape[2]%8),:]
-               
+                data = data[:, :, :-(data.shape[2] % 8), :]
+                labels = labels[:, :, :-(labels.shape[2] % 8), :]
+
             if data.shape[3] % 8 != 0:
-               data = data[:,:,:, :-(data.shape[3]%8)]
-               labels = labels[:,:,:, :-(labels.shape[3]%8)]
+                data = data[:, :, :, :-(data.shape[3] % 8)]
+                labels = labels[:, :, :, :-(labels.shape[3] % 8)]
 
             with torch.no_grad():
                 edge_gt = self.gradmask(labels.cuda())
                 output, edge_out = self.net(data.cuda())
-                labels = labels[:,0:1,:,:].cpu()
+                labels = labels[:, 0:1, :, :].cpu()
                 output = output.cpu()
                 edge_out = edge_out.cpu()
                 edge_gt = edge_gt.cpu()
@@ -139,7 +137,7 @@ class Trainer(object):
             edge_gt = torch.clamp(edge_gt, 0.0, 1.0)
 
             loss_io = self.criterion1(output, labels)
-            loss_edge = 10 * self.bce(edge_out, edge_gt)+ self.criterion1(edge_out, edge_gt)
+            loss_edge = 10 * self.bce(edge_out, edge_gt) + self.criterion1(edge_out, edge_gt)
             loss = loss_io + loss_edge
             eval_losses.append(loss.item())
             eval_losses_edge.append(loss_edge.item())
@@ -148,7 +146,7 @@ class Trainer(object):
             _, mIoU = self.mIoU.get()
 
             tbar.set_description('Epoch:%3d, eval loss:%f, eval_edge:%f, mIoU:%f'
-                                 %(epoch, np.mean(eval_losses), np.mean(eval_losses_edge), mIoU))
+                                 % (epoch, np.mean(eval_losses), np.mean(eval_losses_edge), mIoU))
 
         # debug IoU -> mIoU
         pkl_name = 'Epoch-%3d_IoU-%.4f.pkl' % (epoch, mIoU)
@@ -156,8 +154,6 @@ class Trainer(object):
         if mIoU > self.best_iou:
             torch.save(self.net, ops.join(self.save_pkl, pkl_name))
             self.best_iou = mIoU
-
-
 
     def weight_init(self, m):
         if isinstance(m, nn.Conv2d):
@@ -189,18 +185,14 @@ class GradientMask(nn.Module):
         x0 = torch.sqrt(torch.pow(x0_v, 2) + torch.pow(x0_h, 2) + 1e-6)
 
         return x0
+
+
 if __name__ == '__main__':
     args = parse_args()
 
     trainer = Trainer(args)
-    for epoch in range(1, args.epochs+1):
+    for epoch in range(1, args.epochs + 1):
         trainer.training(epoch)
         trainer.validation(epoch)
 
     print('Best IoU: %.5f' % (trainer.best_miou))
-
-
-
-
-
-

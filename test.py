@@ -82,7 +82,7 @@ class Main(object):
             output[output > 1.] = 1
             output[output < 0] = 0
             self.ROC_metric.update(output, labels)
-
+            # 在这个里进行了二值化.
             output[output >= 0.5] = 1
             output[output < 0.5] = 0
 
