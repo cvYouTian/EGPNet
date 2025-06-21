@@ -20,8 +20,10 @@ from metrics import mIoU
 def parse_args():
     # Setting parameters
     parser = ArgumentParser(description='Implement of EGPNet model')
+    parser.add_argument('--base_dir', type=str,
+                        default='/home/youtian/Documents/pro/pyCode/CFFNet-V2/data/dataset/',
+                        help='sirst_aug IRSTD-1k   MDvsFA_cGAN')
     parser.add_argument('--dataset', type=str, default='IRSTD-1k', help='sirst_aug IRSTD-1k   MDvsFA_cGAN')
-
     # Training parameters
     parser.add_argument('--batch-size', type=int, default=1, help='batch_size for training')
     parser.add_argument('--epochs', type=int, default=200, help='number of epochs')

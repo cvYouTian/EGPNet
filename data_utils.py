@@ -43,7 +43,7 @@ class DatasetLoader(Data.Dataset):
     def __init__(self, args, mode='train'):
 
         self.dataset = args.dataset
-        base_dir = '/home/youtian/Documents/pro/pyCode/CFFNet-V2/data/dataset/' + self.dataset
+        base_dir = args.base_dir + self.dataset
         
         if self.dataset == 'IRSTD-1k':
             if mode == 'train':
