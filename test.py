@@ -40,7 +40,7 @@ class Main(object):
         self.mIoU_metric = mIoU(1)
         self.nIoU_metric = nIoU(1)
 
-        folder_name = 'xxxx.pkl'
+        folder_name = '/home/youtian/Documents/pro/pyCode/EGPNet/result/IRSTD-1k/checkpoint/Epoch-146_IoU-0.6080.pkl'
         path = '/result/' + self.args.dataset + '/checkpoint'
         self.load_pkl = ops.join(path, folder_name)
         self.net = torch.load(self.load_pkl)

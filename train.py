@@ -195,4 +195,4 @@ if __name__ == '__main__':
         trainer.training(epoch)
         trainer.validation(epoch)
 
-    print('Best IoU: %.5f' % (trainer.best_miou))
+    print('Best IoU: %.5f' % (trainer.best_iou))
